@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simple AR Menu</title>
+  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="m-0 p-0 overflow-hidden bg-black font-sans">
+
+<video id="video" autoplay playsinline class="fixed top-0 left-0 w-screen h-screen object-cover -scale-x-100 z-0"></video>
+
+<!-- A-Frame Scene overlay -->
+<a-scene id="ar-scene" embedded vr-mode-ui="enabled: false"
+  renderer="alpha: true"
+  class="fixed top-0 left-0 w-screen h-screen z-10 pointer-events-none">
+  
+  <a-assets>
+     <img id="descImg" src="public/description.png" />
+  <img id="ingImg" src="public/ingredients.png" />
+    <a-asset-item id="pizzaModel" src="models/pizza.glb"></a-asset-item>
+  </a-assets>
+
+  
+  <a-plane material="src: #descImg; transparent: true"
+         position="2.7 1.2 -2.5"
+         rotation="0 -10 0"
+         width="2"
+         height="2.75"
+         id="descImage"
+         visible="false"
+          animation="property: position; dir: alternate; dur: 2000; easing: easeInOutSine; loop: true; to: 2.7 1.5 -2.5">
+</a-plane>
+
+  <a-entity id="pizzaEntity"
+            position="0 0.65 -2.5"
+            rotation="0 0 0"
+            scale="0.05 0.05 0.05"
+            visible="false"
+            gltf-model="#pizzaModel"
+            animation="property: rotation; from: 0 0 0; to: 0 360 0; dur: 10000; easing: linear; loop: true">
+  </a-entity>
+
+  <a-plane material="src: #ingImg; transparent: true"
+         position="-2.7 1.2 -2.5"
+         rotation="0 10 0"
+         width="1.8"
+         height="2.75"
+         id="ingImage"
+         visible="false"
+          animation="property: position; dir: alternate; dur: 2000; easing: easeInOutSine; loop: true; to: -2.7 1.5 -2.5">
+</a-plane>
+
+  <a-camera id="camera" position="0 1.6 0"></a-camera>
+</a-scene>
+
+<!-- Info Text -->
+<div id="info"
+     class="fixed bottom-5 left-1/2 transform -translate-x-1/2 text-white bg-black/60 px-5 py-2 rounded-lg text-lg max-w-[90vw] z-20 pointer-events-auto text-center">
+  Arahkan kamera ke barcode pizza
+</div>
+
+<script>
+  const video = document.getElementById('video');
+  const canvas = document.createElement('canvas');
+  const info = document.getElementById('info');
+  const pizzaEntity = document.getElementById('pizzaEntity');
+
+  // Start video camera
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream => {
+      video.srcObject = stream;
+      video.setAttribute('playsinline', true);
+      video.play();
+      requestAnimationFrame(tick);
+    })
+    .catch(err => {
+      info.innerText = 'Tidak dapat mengakses kamera: ' + err.message;
+    });
+
+  let modelShown = false;
+
+  function tick() {
+    if (video.readyState === video.HAVE_ENOUGH_DATA && !modelShown) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+      const descImage = document.getElementById('descImage');
+      const ingImage = document.getElementById('ingImage');
+
+      if (code) {
+        if (code.data === "https://qr.me-qr.com/SaTRywtB") {
+          pizzaEntity.setAttribute('visible', true);
+          descImage.setAttribute('visible', true);
+          ingImage.setAttribute('visible', true);
+          info.innerText = "Pizza Margherita";
+          document.getElementById('ar-scene').style.pointerEvents = 'auto';
+          modelShown = true;
+        } else {
+          info.innerText = "Barcode tidak dikenali: " + code.data;
+        }
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+</script>
+
+</body>
+</html>
