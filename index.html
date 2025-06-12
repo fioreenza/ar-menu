@@ -11,27 +11,48 @@
 
 <video id="video" autoplay playsinline class="fixed top-0 left-0 w-screen h-screen object-cover -scale-x-100 z-0"></video>
 
-<!-- A-Frame Scene overlay -->
 <a-scene id="ar-scene" embedded vr-mode-ui="enabled: false"
   renderer="alpha: true"
-  class="fixed top-0 left-0 w-screen h-screen z-10 pointer-events-none">
+  class="fixed top-0 left-0 w-screen h-screen z-10 pointer-events-auto">
   
   <a-assets>
-     <img id="descImg" src="public/description.png" />
-  <img id="ingImg" src="public/ingredients.png" />
+    <img id="pizzamenu" src="public/pizza-menu.png" />
+    <img id="burgermenu" src="public/burger-menu.png" />
+    <img id="burgerdesc" src="public/burger-desc.png" />
+    <img id="burgering" src="public/burger-ing.png" />
+    <img id="pizzadesc" src="public/pizza-desc.png" />
+    <img id="pizzaing" src="public/pizza-ing.png" />
     <a-asset-item id="pizzaModel" src="models/pizza.glb"></a-asset-item>
+    <a-asset-item id="burgerModel" src="models/burger.glb"></a-asset-item>
   </a-assets>
 
-  
-  <a-plane material="src: #descImg; transparent: true"
+  <a-plane pizza-listener class="clickable" material="src: #pizzamenu; transparent: true"
+         position="-1.2 1.5 -2.5"
+         rotation="0 0 0"
+         width="1.2"
+         height="1.5"
+         id="pizzaMenu"
+         visible="false">
+  </a-plane>
+
+  <a-plane burger-listener class="clickable" material="src: #burgermenu; transparent: true"
+         position="1.2 1.5 -2.5"
+         rotation="0 0 0"
+         width="1.2"
+         height="1.5"
+         id="burgerMenu"
+         visible="false">
+  </a-plane>
+
+  <a-plane material="src: #pizzadesc; transparent: true"
          position="2.7 1.2 -2.5"
          rotation="0 -10 0"
          width="2"
          height="2.75"
-         id="descImage"
+         id="pizzaDesc"
          visible="false"
           animation="property: position; dir: alternate; dur: 2000; easing: easeInOutSine; loop: true; to: 2.7 1.5 -2.5">
-</a-plane>
+  </a-plane>
 
   <a-entity id="pizzaEntity"
             position="0 0.65 -2.5"
@@ -42,20 +63,54 @@
             animation="property: rotation; from: 0 0 0; to: 0 360 0; dur: 10000; easing: linear; loop: true">
   </a-entity>
 
-  <a-plane material="src: #ingImg; transparent: true"
+  <a-plane material="src: #pizzaing; transparent: true"
          position="-2.7 1.2 -2.5"
          rotation="0 10 0"
          width="1.8"
          height="2.75"
-         id="ingImage"
+         id="pizzaIng"
          visible="false"
           animation="property: position; dir: alternate; dur: 2000; easing: easeInOutSine; loop: true; to: -2.7 1.5 -2.5">
-</a-plane>
+  </a-plane>
 
-  <a-camera id="camera" position="0 1.6 0"></a-camera>
+  <a-plane material="src: #burgerdesc; transparent: true"
+         position="2.7 1.2 -2.5"
+         rotation="0 -10 0"
+         width="2"
+         height="2.75"
+         id="burgerDesc"
+         visible="false"
+          animation="property: position; dir: alternate; dur: 2000; easing: easeInOutSine; loop: true; to: 2.7 1.5 -2.5">
+  </a-plane>
+
+    <a-entity id="burgerEntity"
+            position="0 1 -4"
+            rotation="0 0 0"
+            scale="1.2 1.2 1.2"
+            visible="false"
+            gltf-model="#burgerModel"
+            animation="property: rotation; from: 0 0 0; to: 0 360 0; dur: 10000; easing: linear; loop: true">
+  </a-entity>
+
+  <a-plane material="src: #burgering; transparent: true"
+         position="-2.7 1.2 -2.5"
+         rotation="0 10 0"
+         width="1.8"
+         height="2.75"
+         id="burgerIng"
+         visible="false"
+          animation="property: position; dir: alternate; dur: 2000; easing: easeInOutSine; loop: true; to: -2.7 1.5 -2.5">
+  </a-plane>
+
+  <a-camera id="camera" position="0 1.6 0">
+    <a-entity cursor="fuse: true; fuseTimeout: 500"
+            position="0 0 -1"
+            geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+            material="color: black; shader: flat">
+  </a-entity>
+  </a-camera>
 </a-scene>
 
-<!-- Info Text -->
 <div id="info"
      class="fixed bottom-5 left-1/2 transform -translate-x-1/2 text-white bg-black/60 px-5 py-2 rounded-lg text-lg max-w-[90vw] z-20 pointer-events-auto text-center">
   Arahkan kamera ke barcode pizza
@@ -66,8 +121,14 @@
   const canvas = document.createElement('canvas');
   const info = document.getElementById('info');
   const pizzaEntity = document.getElementById('pizzaEntity');
+  const burgerEntity = document.getElementById('burgerEntity');
+  const pizzaDesc = document.getElementById('pizzaDesc');
+  const pizzaIng = document.getElementById('pizzaIng');
+  const pizzaMenu = document.getElementById('pizzaMenu');
+  const burgerMenu = document.getElementById('burgerMenu');
+  const burgerDesc = document.getElementById('burgerDesc');
+  const burgerIng = document.getElementById('burgerIng');
 
-  // Start video camera
   navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
     .then(stream => {
       video.srcObject = stream;
@@ -91,16 +152,11 @@
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-      const descImage = document.getElementById('descImage');
-      const ingImage = document.getElementById('ingImage');
 
       if (code) {
         if (code.data === "https://qr.me-qr.com/SaTRywtB") {
-          pizzaEntity.setAttribute('visible', true);
-          descImage.setAttribute('visible', true);
-          ingImage.setAttribute('visible', true);
-          info.innerText = "Pizza Margherita";
-          document.getElementById('ar-scene').style.pointerEvents = 'auto';
+          pizzaMenu.setAttribute('visible', true);
+          burgerMenu.setAttribute('visible', true);
           modelShown = true;
         } else {
           info.innerText = "Barcode tidak dikenali: " + code.data;
@@ -109,6 +165,30 @@
     }
     requestAnimationFrame(tick);
   }
+
+  AFRAME.registerComponent('pizza-listener', {
+    init: function () {
+      this.el.addEventListener('click', function () {
+        pizzaEntity.setAttribute('visible', true);
+        pizzaDesc.setAttribute('visible', true);
+        pizzaIng.setAttribute('visible', true);
+        pizzaMenu.setAttribute('visible', false);
+        burgerMenu.setAttribute('visible', false);
+      });
+  }
+  }); 
+
+  AFRAME.registerComponent('burger-listener', {
+    init: function () {
+      this.el.addEventListener('click', function () {
+        burgerEntity.setAttribute('visible', true);
+        burgerIng.setAttribute('visible', true);
+        burgerDesc.setAttribute('visible', true);
+        pizzaMenu.setAttribute('visible', false);
+        burgerMenu.setAttribute('visible', false);
+      });
+    }
+  });
 </script>
 
 </body>
